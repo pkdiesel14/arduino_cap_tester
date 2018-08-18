@@ -38,7 +38,7 @@ void loop()
   // If characters arrived over the serial port...
   if (Serial.available()) {
     // Wait a bit for the entire message to arrive
-    delay(100);
+    delay(1000);
     // Clear the screen
     lcd.clear();
 
