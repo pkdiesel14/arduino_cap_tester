@@ -1,14 +1,42 @@
-/**
- * Displays text sent over the serial port (e.g. from the Serial Monitor) on
- * an attached LCD.
+/*  RCTiming_capacitance_meter
+ *   Paul Badger 2008
+ *  Demonstrates use of RC time constants to measure the value of a capacitor 
+ *
+ * Theory   A capcitor will charge, through a resistor, in one time constant, defined as T seconds where
+ *    TC = R * C
+ * 
+ *    TC = time constant period in seconds
+ *    R = resistance in ohms
+ *    C = capacitance in farads (1 microfarad (ufd) = .0000001 farad = 10^-6 farads ) 
+ *
+ *    The capacitor's voltage at one time constant is defined as 63.2% of the charging voltage.
+ *
+ *  Hardware setup:
+ *  Test Capacitor between common point and ground (positive side of an electrolytic capacitor  to common)
+ *  Test Resistor between chargePin and common point
+ *  220 ohm resistor between dischargePin and common point
+ *  Wire between common point and analogPin (A/D input)
  */
+
+/* Libraries needed */
 #include <Wire.h> 
 #include <LiquidCrystal_I2C.h>
 #include <FreqCounter.h>
 
+/* set up macros for readability */
 
-// Set the LCD address to 0x27 for a 16 chars and 2 line display
-LiquidCrystal_I2C lcd(0x27, 16, 2);
+#define analogPin      1          // analog pin for measuring capacitor voltage
+#define chargePin      12         // pin to charge the capacitor - connected to one end of the charging resistor
+#define dischargePin   11         // pin to discharge the capacitor
+#define resistorValue  10000.0F   // change this to whatever resistor value you are using
+                                  // F formatter tells compliler it's a floating point value
+
+/* variable Definitions */
+
+unsigned long startTime;
+unsigned long elapsedTime;
+float microFarads;                // floating point variable to preserve precision, make calculations
+float nanoFarads;
 
 unsigned long frq;
 int cnt;
@@ -18,11 +46,20 @@ float input_555;
 float cap_val;
 
 
-
 void setup()
 {
+  // Set the LCD address to 0x27 for a 16 chars and 2 line display
+  LiquidCrystal_I2C lcd(0x27, 16, 2);
+ 
+/* configure Arduino Pins */
   pinMode(pinLed, OUTPUT);
-  
+  pinMode(chargePin, OUTPUT);     // set chargePin to output
+  digitalWrite(chargePin, LOW);  
+
+  Serial.begin(9600);             // initialize serial transmission for debugging
+
+
+  /* initialize LCD screen */ 
   lcd.begin();
   lcd.backlight();
   lcd.print("Initializing....");
@@ -32,9 +69,6 @@ void setup()
     delay(250);
   }
   delay(3000);
-  // Initialize the serial port at a speed of 9600 baud
-  Serial.begin(9600);
-  Serial.println("Frequency Counter");
 }
 
 
@@ -48,16 +82,58 @@ void loop()
   lcd.setCursor(0,1);
   lcd.print("press button");
 
-  /* This chunck of code was intended to see if the 555 output could be plotted
-   *  accurately.  It really did not work.  the wave always looked distorted
-   *  and I could not figure out if it was sampled properly or not
-   */
-  //input_555 = analogRead(1); // output of 555 is connected to A1 
-  //Serial.println(analogRead(1));
-  //Serial.print(" , ");
-  //Serial.println(millis());
-  //delay(1);
 
+
+}
+
+
+
+
+void setup(){
+
+}
+
+void loop(){
+  digitalWrite(chargePin, HIGH);  // set chargePin HIGH and capacitor charging
+  startTime = millis();
+
+  while(analogRead(analogPin) < 648){       // 647 is 63.2% of 1023, which corresponds to full-scale voltage 
+  }
+
+  elapsedTime= millis() - startTime;
+ // convert milliseconds to seconds ( 10^-3 ) and Farads to microFarads ( 10^6 ),  net 10^3 (1000)  
+  microFarads = ((float)elapsedTime / resistorValue) * 1000;   
+  Serial.print(elapsedTime);       // print the value to serial port
+  Serial.print(" mS    ");         // print units and carriage return
+
+
+  if (microFarads > 1){
+    Serial.print((long)microFarads);       // print the value to serial port
+    Serial.println(" microFarads");         // print units and carriage return
+  }
+  else
+  {
+    // if value is smaller than one microFarad, convert to nanoFarads (10^-9 Farad). 
+    // This is  a workaround because Serial.print will not print floats
+
+    nanoFarads = microFarads * 1000.0;      // multiply by 1000 to convert to nanoFarads (10^-9 Farads)
+    Serial.print((long)nanoFarads);         // print the value to serial port
+    Serial.println(" nanoFarads");          // print units and carriage return
+  }
+
+  /* dicharge the capacitor  */
+  digitalWrite(chargePin, LOW);             // set charge pin to  LOW 
+  pinMode(dischargePin, OUTPUT);            // set discharge pin to output 
+  digitalWrite(dischargePin, LOW);          // set discharge pin LOW 
+  while(analogRead(analogPin) > 0){         // wait until capacitor is completely discharged
+  }
+
+
+/* Function defined to specifically calculate the capacitance value using the frequency of the 555 output
+ *  
+ */
+ int calc_Freq()
+ {
  
   // wait if any serial is going on
   FreqCounter::f_comp=10;   // Cal Value / Calibrate with professional Freq Counter
@@ -91,20 +167,5 @@ void loop()
       //Serial.println(period);
 
    }  
-   
-/*
-  // If characters arrived over the serial port...
-  if (Serial.available()) {
-    // Wait a bit for the entire message to arrive
-    delay(100);
-    // Clear the screen
-    lcd.clear();
-
-    // Write all characters received with the serial port to the LCD.
-    while (Serial.available() > 0) {
-      lcd.write(Serial.read());
-      delay(1000);
-    } 
-  } */
-
-}
+    
+ }
