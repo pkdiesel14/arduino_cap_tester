@@ -22,6 +22,7 @@
 #include <Wire.h> 
 #include <LiquidCrystal_I2C.h>
 #include <FreqCounter.h>
+LiquidCrystal_I2C lcd(0x27, 16, 2);
 
 /* set up macros for readability */
 
@@ -30,6 +31,7 @@
 #define dischargePin   11         // pin to discharge the capacitor
 #define resistorValue  10000.0F   // change this to whatever resistor value you are using
                                   // F formatter tells compliler it's a floating point value
+#define pinLed         13         // used to flash the LED on the nano
 
 /* variable Definitions */
 
@@ -40,7 +42,6 @@ float nanoFarads;
 
 unsigned long frq;
 int cnt;
-int pinLed=13;
 unsigned long period;
 float input_555;
 float cap_val;
@@ -49,15 +50,13 @@ float cap_val;
 void setup()
 {
   // Set the LCD address to 0x27 for a 16 chars and 2 line display
-  LiquidCrystal_I2C lcd(0x27, 16, 2);
  
 /* configure Arduino Pins */
-  pinMode(pinLed, OUTPUT);
+  pinMode(pinLed, OUTPUT);        // set led control pin to output
   pinMode(chargePin, OUTPUT);     // set chargePin to output
-  digitalWrite(chargePin, LOW);  
+  digitalWrite(chargePin, LOW);   // initialize charge pin output to low
 
   Serial.begin(9600);             // initialize serial transmission for debugging
-
 
   /* initialize LCD screen */ 
   lcd.begin();
@@ -77,23 +76,13 @@ void setup()
 
 void loop()
 {
+   LiquidCrystal_I2C lcd(0x27, 16, 2);
+  lcd.begin();
   lcd.clear();
   lcd.print("Ready");
   lcd.setCursor(0,1);
   lcd.print("press button");
 
-
-
-}
-
-
-
-
-void setup(){
-
-}
-
-void loop(){
   digitalWrite(chargePin, HIGH);  // set chargePin HIGH and capacitor charging
   startTime = millis();
 
@@ -128,10 +117,10 @@ void loop(){
   while(analogRead(analogPin) > 0){         // wait until capacitor is completely discharged
   }
 
-
+}
 /* Function defined to specifically calculate the capacitance value using the frequency of the 555 output
  *  
- */
+ 
  int calc_Freq()
  {
  
@@ -168,4 +157,4 @@ void loop(){
 
    }  
     
- }
+ }*/
